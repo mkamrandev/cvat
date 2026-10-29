@@ -1,6 +1,7 @@
 from django.db.models import Count
 from rest_framework import status
-from rest_framework.decorators import api_view, permission_classes
+from rest_framework.decorators import api_view, permission_classes, renderer_classes
+from rest_framework.renderers import JSONRenderer
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 
@@ -9,6 +10,7 @@ from cvat.apps.engine.models import LabeledShape, Task
 
 @api_view(["GET"])
 @permission_classes([IsAuthenticated])
+@renderer_classes([JSONRenderer])
 def annotation_counts(request, task_id: int):
     """Return the number of annotated shapes per label for one task.
 
