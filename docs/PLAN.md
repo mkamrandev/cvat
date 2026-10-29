@@ -56,7 +56,10 @@ are ticked with evidence.
 
 Recorded here as they happen, with the reason.
 
-- (none yet)
+ Acknowledged at 09:45 PKT. The full 8-hour window ends at 17:45, but I have a
+  work commitment from 15:00, so my usable window is about 5 hours. I am
+  compressing the schedule below and dropping items 7 to 10 entirely rather than
+  leaving the floor unfinished. Submission will be made before 15:00.
 
 ## Decision record
 
