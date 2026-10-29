@@ -63,8 +63,42 @@ Recorded here as they happen, with the reason.
 
 ## Decision record
 
-Filled in only if item 10 is reached.
+**The approach taken.** Count rows in `LabeledShape` directly, with one grouped
+query that reaches the task through `job -> segment -> task`. The label name comes
+from a join to `engine_label`, so the database does the counting and the view does
+no per-label work.
 
-- Approach taken:
-- Approach rejected:
-- What rejecting it cost:
+**The approach rejected.** Read the task's annotations through CVAT's own
+`dataset_manager` layer, which is what the export and import paths use, and count
+in Python from the structure it returns.
+
+**What rejecting it cost.** The `dataset_manager` layer returns annotations the way
+CVAT itself understands them, which includes tracks as well as shapes, and it is the
+same view the user sees when exporting a dataset. By going to the shape table
+directly I get a single fast query, but I also get a narrower answer:
+
+- `LabeledTrack` is not counted. A task annotated with tracks, which is normal for
+  video, will report counts of zero from this endpoint even though the task plainly
+  holds annotations. On an image task imported from COCO, as here, the difference
+  does not appear, which is exactly why it would be easy to ship this without
+  noticing.
+- My totals are shape counts, not annotation counts as the source file defines them.
+  The COCO subset holds 2168 annotations and this task reports 2401 shapes. The
+  difference is real and explainable: multi-part segmentations become several
+  polygons and the 23 `iscrowd` annotations become masks. The endpoint is correct
+  about shapes; it is simply answering a slightly different question than someone
+  comparing against the COCO file would assume.
+
+I kept the direct query because the measurable requirement was about the speed and
+shape of the query, and because the behaviour I lost is visible and declarable
+rather than silent. If this were going into the product rather than an assessment,
+I would either include `LabeledTrack` in the aggregate or name the endpoint for what
+it actually counts.
+
+**A second, smaller decision.** The page was built as a React component inside
+`cvat-ui` rather than as a Django-rendered template in the `test` app. The template
+would have been faster to iterate on, because the backend image rebuilds in about
+10 seconds while the UI image takes about 4 minutes. I chose the React page because
+the requirement asks for a page in the web interface and the result should sit where
+CVAT's other pages sit. The cost was real: roughly four minutes per UI change, which
+is why the page went through fewer revisions than the endpoint did.
