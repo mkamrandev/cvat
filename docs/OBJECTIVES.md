@@ -45,10 +45,11 @@ FILL IN AFTER MEASURING.
 
 ### Result
 
-Measured at 11:30 PKT on the environment described above. The login request and a
-discarded warm-up request were issued first; the warm-up returned 200 in 0.041651s.
+Measured twice, because the endpoint changed between the two runs.
 
-Raw output, five runs, pasted exactly as printed:
+**First measurement, 11:30 PKT.** The endpoint issued a single grouped query.
+A login request and a discarded warm-up came first; the warm-up returned 200 in
+0.041651s.
 
 run 1 0.037911s
 run 2 0.036986s
@@ -57,37 +58,53 @@ run 4 0.038582s
 run 5 0.036559s
 
 
+Median 37.911 ms, spread 36.559 ms to 38.582 ms, a range of 2.0 ms.
+
+**Second measurement, 11:45 PKT.** Item 7 added a breakdown by shape type, so the
+endpoint now issues two grouped queries rather than one. I re-measured rather than
+report a number taken from a version of the code that no longer exists.
+
+run 1 0.060156s
+run 2 0.038612s
+run 3 0.037051s
+run 4 0.051611s
+run 5 0.036765s
+
+
 | Metric | Value |
 | --- | --- |
-| Run 1 | 37.911 ms |
-| Run 2 | 36.986 ms |
-| Run 3 | 38.422 ms |
-| Run 4 | 38.582 ms |
-| Run 5 | 36.559 ms |
-| Median | 37.911 ms |
-| Spread (min to max) | 36.559 ms to 38.582 ms, a range of 2.0 ms |
-| Target met | YES, by a factor of about 8 |
+| Median | 38.612 ms |
+| Spread (min to max) | 36.765 ms to 60.156 ms, a range of 23.4 ms |
+| Target (300 ms) | Met |
 
 ### What this does and does not show
 
-The target was cleared comfortably, which says the endpoint is not doing per-label
-work. I had set 300 ms to catch N+1 queries rather than to be difficult, and on
-this dataset that is what it catches.
+The target was cleared by roughly a factor of eight. I set 300 ms to catch N+1
+queries rather than to be hard to reach, and on this dataset that is what it
+catches: an implementation issuing one count per label would not be near this.
 
-Being honest about it: 300 ms was a conservative ceiling. A median of 38 ms with a
-2 ms spread tells me the request cost is dominated by fixed overhead, not by the
-data, which is what I expected from 2168 annotations. I would rather report that
-plainly than present an easy target as a close result.
+Two honest observations rather than one clean claim:
 
-The stronger evidence is the SQL itself, which shows one grouped statement rather
-than one statement per label:
+300 ms was a conservative ceiling. A median of 38 ms says the request cost is
+dominated by fixed overhead, not by the data, which is what I expected from 2168
+annotations. I would rather say that than present an easy target as a close result.
 
-If the target was missed, the reason goes here rather than being quietly adjusted.
+The second measurement is slower in the tail than the first, not in the median.
+The median moved by 0.7 ms while the range grew from 2.0 ms to 23.4 ms. One extra
+grouped query does not explain a 23 ms outlier on its own; with five runs on a
+shared cloud container I cannot separate my change from the machine, and I am not
+going to claim I can.
 
-SELECT "engine_label"."name" AS "label__name", COUNT("engine_labeledshape"."id") AS "count" FROM "engine_labeledshape" INNER JOIN "engine_job" ON ("engine_labeledshape"."job_id" = "engine_job"."id") INNER JOIN "engine_segment" ON ("engine_job"."segment_id" = "engine_segment"."id") INNER JOIN "engine_label" ON ("engine_labeledshape"."label_id" = "engine_label"."id") WHERE "engine_segment"."task_id" = 1 GROUP BY 1 ORDER BY 2 DESC
+The stronger evidence is the SQL, which is one grouped statement per question
+asked, not one per label:
+
+SELECT “engine_label”.”name” AS “label__name”, COUNT(“engine_labeledshape”.”id”) AS “count”
+FROM “engine_labeledshape”
+INNER JOIN “engine_job” ON (“engine_labeledshape”.”job_id” = “engine_job”.”id”)
+INNER JOIN “engine_segment” ON (“engine_job”.”segment_id” = “engine_segment”.”id”)
+INNER JOIN “engine_label” ON (“engine_labeledshape”.”label_id” = “engine_label”.”id”)
+WHERE “engine_segment”.”task_id” = 1 GROUP BY 1 ORDER BY 2 DESC
 
 
 What this does not show: behaviour at scale. I have not measured a task with
 hundreds of thousands of annotations, and nothing here predicts it.
-
-FILL IN.
